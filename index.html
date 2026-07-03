@@ -101,6 +101,18 @@
   .listen .hint{font-size:15px;color:#7C89A0;font-weight:700}
   .replay{background:none;border:none;color:var(--accent-2);font-weight:800;
     font-size:14px;cursor:pointer;text-decoration:underline}
+  .speed-picker{display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:4px}
+  .speed-label{font-size:12px;color:#9AA7B8;font-weight:700}
+  .speed-btns{display:flex;gap:6px}
+  .speed-btn{
+    font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;
+    padding:7px 12px;border-radius:99px;border:2px solid #E4ECF5;
+    background:#FBFDFF;color:#7C89A0;transition:.15s;
+  }
+  .speed-btn.active{
+    background:var(--accent-2);color:#fff;border-color:var(--accent-2);
+    box-shadow:0 3px 0 #3E86BE;
+  }
 
   /* 입력칸 */
   .writing{position:relative;margin-bottom:18px}
@@ -254,6 +266,14 @@
         <button class="speaker" id="speakerBtn" aria-label="문제 듣기">🔊</button>
         <span class="hint">동그란 단추를 눌러 문제를 들어요</span>
         <button class="replay" id="replayBtn">🔁 다시 듣기</button>
+        <div class="speed-picker">
+          <span class="speed-label">읽기 속도</span>
+          <div class="speed-btns" id="speedBtns">
+            <button class="speed-btn" data-rate="0.5">🐢 느리게</button>
+            <button class="speed-btn" data-rate="0.7">보통</button>
+            <button class="speed-btn" data-rate="0.9">🐰 빠르게</button>
+          </div>
+        </div>
       </div>
       <div class="writing">
         <label for="answerInput">들은 대로 써 보세요</label>
@@ -336,20 +356,22 @@ const firebaseConfig = {
 const fbApp = initializeApp(firebaseConfig);
 const db = getFirestore(fbApp);
 
-/* ── 문제 은행 (초2) ── */
+/* ── 문제 은행 (초2 · 맞춤법 헷갈리는 낱말) ── */
 const ALL_QUESTIONS = [
-  "학교","친구","선생님","공책","연필","가방","우산","시계","나무","꽃밭",
-  "무지개","할머니","강아지","고양이","코끼리","해바라기","떡볶이","김밥","놀이터","도서관",
-  "나는 학교에 갑니다.",
-  "친구와 함께 놀아요.",
-  "꽃이 예쁘게 피었어요.",
-  "오늘은 날씨가 맑아요.",
-  "우리 가족은 네 명입니다.",
-  "책을 읽으면 재미있어요.",
-  "동생이 웃고 있어요.",
-  "비가 내려서 우산을 썼어요.",
-  "선생님께서 칭찬해 주셨어요.",
-  "손을 깨끗이 씻어요."
+  // 받침·표기 헷갈림
+  "깨끗이","깊이","같이","반듯이","꼼꼼히","솔직히","가만히","조용히",
+  // 있다/없다, 받침 ㅆ·ㅄ
+  "재미있다","맛있다","멋있다","없다","가엾다","깨끗하다",
+  // 된소리·거센소리
+  "떡국","꼭꼭","깡충깡충","살짝","깜짝","훨씬","얼른","이따가",
+  // ㅎ 받침·연음
+  "좋다","놓다","많다","싫다","닿다","괜찮다",
+  // 자주 틀리는 낱말
+  "며칠","오랜만","일찍","금세","웬일","설레다","바라다","담그다",
+  // 받침 ㄲ·ㅋ·ㅌ·ㅍ
+  "부엌","무릎","솥","숲","팥","깎다","엮다",
+  // 헷갈리는 모음
+  "예쁘다","희망","의사","무늬","띄어쓰기","계단","시계","지혜"
 ];
 const QUESTIONS_PER_ROUND = 10;
 
@@ -359,21 +381,27 @@ let user = null;   // {code, name, totalQ, totalCorrect, rounds, history[]}
 
 /* ── 음성 ── */
 let koVoice = null;
+let speechRate = 0.5;   // 기본: 느리게
 function pickVoice(){
   const vs = speechSynthesis.getVoices();
   koVoice = vs.find(v=>v.lang==="ko-KR") || vs.find(v=>v.lang&&v.lang.startsWith("ko")) || null;
 }
 if('speechSynthesis' in window){ pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+
+function speakOnce(text, onDone){
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang="ko-KR"; if(koVoice)u.voice=koVoice; u.rate=speechRate; u.pitch=1.05;
+  const btn = document.getElementById('speakerBtn');
+  u.onstart=()=>btn.classList.add('playing');
+  u.onend=()=>{ btn.classList.remove('playing'); if(onDone) onDone(); };
+  u.onerror=()=>{ btn.classList.remove('playing'); if(onDone) onDone(); };
+  speechSynthesis.speak(u);
+}
+// 자동 두 번 연속 읽기
 function speak(text){
   if(!('speechSynthesis' in window)){ toast("이 브라우저는 소리 읽기를 지원하지 않아요"); return; }
   speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang="ko-KR"; if(koVoice)u.voice=koVoice; u.rate=0.85; u.pitch=1.05;
-  const btn = document.getElementById('speakerBtn');
-  u.onstart=()=>btn.classList.add('playing');
-  u.onend=()=>btn.classList.remove('playing');
-  u.onerror=()=>btn.classList.remove('playing');
-  speechSynthesis.speak(u);
+  speakOnce(text, ()=>{ setTimeout(()=>speakOnce(text), 500); });
 }
 
 /* ── 화면 전환 ── */
@@ -613,6 +641,20 @@ document.getElementById('codeInput').addEventListener('keydown', e=>{ if(e.key==
 document.getElementById('restartBtn').addEventListener('click', ()=>beginRound());
 document.getElementById('retryWrongBtn').addEventListener('click', ()=>beginRound(wrongList.map(w=>w.q)));
 document.getElementById('logoutBtn').addEventListener('click', ()=>{ user=null; show('login'); });
+
+/* 속도 조절 버튼 */
+const speedBtns = document.querySelectorAll('#speedBtns .speed-btn');
+function setSpeed(rate){
+  speechRate = rate;
+  speedBtns.forEach(b=>b.classList.toggle('active', parseFloat(b.dataset.rate)===rate));
+}
+speedBtns.forEach(b=>{
+  b.addEventListener('click', ()=>{
+    setSpeed(parseFloat(b.dataset.rate));
+    if(questions[current]) speak(questions[current]); // 바뀐 속도로 바로 들려주기
+  });
+});
+setSpeed(0.5); // 기본 느리게 활성화
 
 /* 시작 */
 show('login');
