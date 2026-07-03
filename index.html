@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>또박또박 받아쓰기</title>
+<style>
+  :root{
+    --paper:#FBF6EC;      /* 연습장 종이색 */
+    --line:#CBD9E8;       /* 공책 줄 */
+    --ink:#2B3A55;        /* 연필/글씨 */
+    --accent:#F2994A;     /* 주황 강조(별,버튼) */
+    --accent-2:#5AA9E6;   /* 파랑 강조 */
+    --good:#5AAF6F;       /* 정답 초록 */
+    --bad:#E86B6B;        /* 오답 빨강 */
+    --card:#FFFFFF;
+    --shadow:0 6px 0 rgba(43,58,85,.12), 0 12px 24px rgba(43,58,85,.12);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:"Nanum Gothic","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    background:
+      radial-gradient(circle at 20% 10%, #FFF3DE 0%, transparent 40%),
+      radial-gradient(circle at 90% 80%, #E6F0FA 0%, transparent 45%),
+      var(--paper);
+    color:var(--ink);
+    min-height:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:16px;
+  }
+  .app{
+    width:100%;
+    max-width:560px;
+  }
+
+  /* ── 상단 헤더 ── */
+  header{
+    text-align:center;
+    margin-bottom:14px;
+  }
+  header h1{
+    font-size:30px;
+    letter-spacing:-1px;
+    color:var(--ink);
+  }
+  header h1 .dot{color:var(--accent)}
+  header p{font-size:14px;color:#7C89A0;margin-top:4px}
+
+  /* ── 진행/점수 바 ── */
+  .status{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    background:var(--card);
+    border-radius:18px;
+    padding:12px 16px;
+    box-shadow:var(--shadow);
+    margin-bottom:14px;
+  }
+  .status .stars{font-size:22px;letter-spacing:2px}
+  .status .progress-text{font-size:14px;color:#7C89A0;font-weight:700}
+  .status .score{font-weight:800;font-size:16px;color:var(--accent)}
+
+  .bar{
+    height:10px;border-radius:99px;background:#EDE6D6;overflow:hidden;margin-bottom:18px;
+  }
+  .bar > i{
+    display:block;height:100%;width:0;border-radius:99px;
+    background:linear-gradient(90deg,var(--accent),#F7B267);
+    transition:width .4s ease;
+  }
+
+  /* ── 카드 ── */
+  .card{
+    background:var(--card);
+    border-radius:24px;
+    padding:26px 22px 28px;
+    box-shadow:var(--shadow);
+  }
+
+  /* 듣기 버튼 */
+  .listen{
+    display:flex;flex-direction:column;align-items:center;gap:14px;
+    margin-bottom:22px;
+  }
+  .speaker{
+    width:110px;height:110px;border-radius:50%;
+    border:none;cursor:pointer;
+    background:radial-gradient(circle at 35% 30%,#FFC988,var(--accent));
+    box-shadow:0 6px 0 #D77E2E, 0 10px 20px rgba(242,153,74,.4);
+    font-size:46px;color:#fff;
+    transition:transform .1s, box-shadow .1s;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .speaker:active{transform:translateY(4px);box-shadow:0 2px 0 #D77E2E}
+  .speaker.playing{animation:pulse 1s infinite}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+  .listen .hint{font-size:15px;color:#7C89A0;font-weight:700}
+  .replay{
+    background:none;border:none;color:var(--accent-2);
+    font-weight:800;font-size:14px;cursor:pointer;text-decoration:underline;
+  }
+
+  /* 공책 입력칸 */
+  .writing{
+    position:relative;margin-bottom:18px;
+  }
+  .writing label{
+    display:block;font-size:14px;color:#7C89A0;font-weight:700;margin-bottom:8px;
+  }
+  .notebook{
+    width:100%;
+    font-family:inherit;
+    font-size:26px;
+    font-weight:800;
+    color:var(--ink);
+    text-align:center;
+    padding:18px 12px;
+    border:none;
+    border-radius:14px;
+    background:
+      repeating-linear-gradient(transparent, transparent 47px, var(--line) 47px, var(--line) 49px);
+    background-color:#FBFDFF;
+    box-shadow:inset 0 0 0 2px #E4ECF5;
+    outline:none;
+  }
+  .notebook:focus{box-shadow:inset 0 0 0 3px var(--accent-2)}
+
+  /* 채점 결과 */
+  .result{
+    text-align:center;padding:6px 0 18px;display:none;
+  }
+  .result.show{display:block}
+  .result .mark{font-size:52px;line-height:1}
+  .result .msg{font-size:19px;font-weight:800;margin-top:6px}
+  .result.correct .msg{color:var(--good)}
+  .result.wrong .msg{color:var(--bad)}
+  .result .answer{
+    margin-top:10px;font-size:16px;color:#7C89A0;font-weight:700;
+  }
+  .result .answer b{color:var(--ink);font-size:20px}
+
+  /* 버튼 */
+  .btn{
+    width:100%;
+    border:none;cursor:pointer;
+    font-family:inherit;font-weight:800;font-size:19px;
+    padding:16px;border-radius:16px;
+    color:#fff;
+    transition:transform .08s, box-shadow .08s;
+  }
+  .btn:active{transform:translateY(3px)}
+  .btn-primary{background:var(--accent-2);box-shadow:0 5px 0 #3E86BE}
+  .btn-primary:active{box-shadow:0 2px 0 #3E86BE}
+  .btn-next{background:var(--accent);box-shadow:0 5px 0 #D77E2E}
+  .btn-next:active{box-shadow:0 2px 0 #D77E2E}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+
+  /* ── 완료 화면 ── */
+  .done{display:none;text-align:center}
+  .done.show{display:block}
+  .done .trophy{font-size:80px}
+  .done h2{font-size:28px;margin:10px 0 4px}
+  .done .final-stars{font-size:34px;letter-spacing:4px;margin:8px 0}
+  .done .summary{
+    background:#FBFDFF;border-radius:14px;padding:16px;margin:16px 0;
+    font-size:16px;color:#5B6B85;font-weight:700;line-height:1.7;
+  }
+  .done .summary b{color:var(--ink)}
+
+  /* 오답노트 */
+  .review{
+    text-align:left;background:#FFF6F6;border:2px dashed #F3C0C0;
+    border-radius:16px;padding:16px;margin:16px 0;
+  }
+  .review h3{font-size:16px;color:var(--bad);margin-bottom:10px}
+  .review ul{list-style:none}
+  .review li{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:8px 0;border-bottom:1px solid #F3D9D9;font-size:15px;
+  }
+  .review li:last-child{border-bottom:none}
+  .review .yours{color:var(--bad);font-weight:700;text-decoration:line-through}
+  .review .right{color:var(--good);font-weight:800}
+
+  .footer-btns{display:flex;gap:10px;margin-top:6px}
+  .footer-btns .btn{font-size:16px;padding:14px}
+  .btn-ghost{background:#EDE6D6;color:var(--ink);box-shadow:0 4px 0 #D5CBB4}
+  .btn-ghost:active{box-shadow:0 1px 0 #D5CBB4}
+
+  .toast{
+    position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(100px);
+    background:var(--ink);color:#fff;padding:12px 22px;border-radius:99px;
+    font-weight:700;font-size:14px;opacity:0;transition:.3s;pointer-events:none;
+    box-shadow:0 8px 20px rgba(0,0,0,.25);
+  }
+  .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>또박또박 받아쓰기<span class="dot">.</span></h1>
+    <p>소리를 잘 듣고 또박또박 써 보아요</p>
+  </header>
+
+  <div class="status">
+    <span class="stars" id="stars">☆☆☆☆☆</span>
+    <span class="progress-text" id="progressText">1 / 10</span>
+    <span class="score" id="score">⭐ 0점</span>
+  </div>
+  <div class="bar"><i id="barFill"></i></div>
+
+  <!-- 문제 화면 -->
+  <div class="card" id="quizCard">
+    <div class="listen">
+      <button class="speaker" id="speakerBtn" aria-label="문제 듣기">🔊</button>
+      <span class="hint">동그란 단추를 눌러 문제를 들어요</span>
+      <button class="replay" id="replayBtn">🔁 다시 듣기</button>
+    </div>
+
+    <div class="writing">
+      <label for="answerInput">들은 대로 써 보세요</label>
+      <input class="notebook" id="answerInput" type="text"
+             autocomplete="off" autocorrect="off" autocapitalize="off"
+             spellcheck="false" placeholder="여기에 써요">
+    </div>
+
+    <div class="result" id="result">
+      <div class="mark" id="resultMark"></div>
+      <div class="msg" id="resultMsg"></div>
+      <div class="answer" id="resultAnswer"></div>
+    </div>
+
+    <button class="btn btn-primary" id="checkBtn">채점하기</button>
+    <button class="btn btn-next" id="nextBtn" style="display:none">다음 문제 →</button>
+  </div>
+
+  <!-- 완료 화면 -->
+  <div class="card done" id="doneCard">
+    <div class="trophy">🏆</div>
+    <h2>다 풀었어요!</h2>
+    <div class="final-stars" id="finalStars">⭐⭐⭐</div>
+    <div class="summary" id="doneSummary"></div>
+    <div class="review" id="reviewBox" style="display:none">
+      <h3>📓 오답노트 · 다시 볼까요?</h3>
+      <ul id="reviewList"></ul>
+    </div>
+    <div class="footer-btns">
+      <button class="btn btn-ghost" id="retryWrongBtn" style="display:none">틀린 문제만 다시</button>
+      <button class="btn btn-next" id="restartBtn">처음부터 다시</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ────────────────────────────────
+   문제 은행 (초2 · 짧은 문장 + 교과서 어휘)
+   ──────────────────────────────── */
+const ALL_QUESTIONS = [
+  // 교과서 어휘
+  "학교","친구","선생님","공책","연필","가방","우산","시계","나무","꽃밭",
+  "무지개","할머니","강아지","고양이","코끼리","해바라기","떡볶이","김밥","놀이터","도서관",
+  // 짧은 문장
+  "나는 학교에 갑니다.",
+  "친구와 함께 놀아요.",
+  "꽃이 예쁘게 피었어요.",
+  "오늘은 날씨가 맑아요.",
+  "우리 가족은 네 명입니다.",
+  "책을 읽으면 재미있어요.",
+  "동생이 웃고 있어요.",
+  "비가 내려서 우산을 썼어요.",
+  "선생님께서 칭찬해 주셨어요.",
+  "손을 깨끗이 씻어요."
+];
+
+const QUESTIONS_PER_ROUND = 10;
+
+let questions = [];      // 이번 판 문제
+let current = 0;         // 현재 문제 번호
+let score = 0;           // 점수
+let wrongList = [];      // 오답 모음 {q, mine}
+let answered = false;    // 현재 문제 채점 여부
+let onlyWrongMode = false;
+
+/* ── 음성 준비 (한국어 목소리 우선) ── */
+let koVoice = null;
+function pickVoice(){
+  const voices = speechSynthesis.getVoices();
+  koVoice = voices.find(v => v.lang === "ko-KR")
+         || voices.find(v => v.lang && v.lang.startsWith("ko"))
+         || null;
+}
+if ('speechSynthesis' in window){
+  pickVoice();
+  speechSynthesis.onvoiceschanged = pickVoice;
+}
+
+function speak(text){
+  if(!('speechSynthesis' in window)){
+    toast("이 브라우저는 소리 읽기를 지원하지 않아요");
+    return;
+  }
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = "ko-KR";
+  if(koVoice) u.voice = koVoice;
+  u.rate = 0.85;   // 조금 천천히
+  u.pitch = 1.05;
+  const btn = document.getElementById('speakerBtn');
+  u.onstart = ()=>btn.classList.add('playing');
+  u.onend   = ()=>btn.classList.remove('playing');
+  u.onerror = ()=>btn.classList.remove('playing');
+  speechSynthesis.speak(u);
+}
+
+/* ── 판 시작 ── */
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+function startRound(list){
+  questions = list;
+  current = 0;
+  score = 0;
+  wrongList = [];
+  answered = false;
+  document.getElementById('doneCard').classList.remove('show');
+  document.getElementById('quizCard').style.display = 'block';
+  updateStatus();
+  loadQuestion();
+}
+
+/* ── 문제 로드 ── */
+function loadQuestion(){
+  answered = false;
+  const input = document.getElementById('answerInput');
+  input.value = "";
+  input.disabled = false;
+  input.focus();
+
+  document.getElementById('result').className = 'result';
+  document.getElementById('checkBtn').style.display = 'block';
+  document.getElementById('checkBtn').disabled = false;
+  document.getElementById('nextBtn').style.display = 'none';
+
+  updateStatus();
+  // 문제 자동 읽기 (약간의 지연으로 안정적 재생)
+  setTimeout(()=>speak(questions[current]), 350);
+}
+
+/* ── 정답 비교(띄어쓰기·문장부호 관대하게) ── */
+function normalize(s){
+  return s.replace(/\s+/g,"").replace(/[.,!?~…·]/g,"").trim();
+}
+
+function check(){
+  if(answered) return;
+  const input = document.getElementById('answerInput');
+  const mine = input.value.trim();
+  if(mine === ""){
+    toast("먼저 답을 써 주세요 ✏️");
+    input.focus();
+    return;
+  }
+  answered = true;
+  input.disabled = true;
+
+  const correctAns = questions[current];
+  const isCorrect = normalize(mine) === normalize(correctAns);
+
+  const result = document.getElementById('result');
+  const mark = document.getElementById('resultMark');
+  const msg = document.getElementById('resultMsg');
+  const ansEl = document.getElementById('resultAnswer');
+
+  if(isCorrect){
+    score += 10;
+    result.className = 'result show correct';
+    mark.textContent = "⭕";
+    msg.textContent = "정답이에요! 잘했어요";
+    ansEl.innerHTML = "";
+    burstStar();
+  }else{
+    result.className = 'result show wrong';
+    mark.textContent = "❌";
+    msg.textContent = "아쉬워요, 다시 볼까요?";
+    ansEl.innerHTML = "정답: <b>" + escapeHtml(correctAns) + "</b>";
+    wrongList.push({q:correctAns, mine:mine});
+  }
+
+  document.getElementById('checkBtn').style.display = 'none';
+  const nextBtn = document.getElementById('nextBtn');
+  nextBtn.style.display = 'block';
+  nextBtn.textContent = (current === questions.length-1) ? "결과 보기 🎉" : "다음 문제 →";
+  nextBtn.focus();
+  updateStatus();
+}
+
+function next(){
+  if(current < questions.length-1){
+    current++;
+    loadQuestion();
+  }else{
+    finish();
+  }
+}
+
+/* ── 상태 표시 ── */
+function updateStatus(){
+  document.getElementById('progressText').textContent =
+    (current+1) + " / " + questions.length;
+  document.getElementById('score').textContent = "⭐ " + score + "점";
+  document.getElementById('barFill').style.width =
+    ((current + (answered?1:0)) / questions.length * 100) + "%";
+  // 별: 맞춘 개수(점수/10)를 5개 기준으로 환산
+  const earned = Math.min(5, Math.round(score/10 / questions.length * 5));
+  document.getElementById('stars').textContent =
+    "★".repeat(earned) + "☆".repeat(5-earned);
+}
+
+/* ── 완료 ── */
+function finish(){
+  document.getElementById('quizCard').style.display = 'none';
+  const done = document.getElementById('doneCard');
+  done.classList.add('show');
+
+  const total = questions.length;
+  const correctCount = total - wrongList.length;
+  const starCount = Math.max(1, Math.round(correctCount/total*3));
+  document.getElementById('finalStars').textContent =
+    "⭐".repeat(starCount) + "☆".repeat(3-starCount);
+
+  document.getElementById('doneSummary').innerHTML =
+    "모두 <b>"+total+"문제</b> 중에<br><b style='color:var(--good)'>"+correctCount+"개</b> 맞혔어요! · 점수 <b>"+score+"점</b>";
+
+  // 오답노트
+  const reviewBox = document.getElementById('reviewBox');
+  const reviewList = document.getElementById('reviewList');
+  const retryBtn = document.getElementById('retryWrongBtn');
+  if(wrongList.length > 0){
+    reviewBox.style.display = 'block';
+    retryBtn.style.display = 'block';
+    reviewList.innerHTML = wrongList.map(w =>
+      "<li><span class='yours'>"+escapeHtml(w.mine)+"</span>"+
+      "<span class='right'>"+escapeHtml(w.q)+"</span></li>"
+    ).join("");
+  }else{
+    reviewBox.style.display = 'none';
+    retryBtn.style.display = 'none';
+    document.getElementById('doneSummary').innerHTML +=
+      "<br>🎊 하나도 안 틀렸어요! 최고예요!";
+  }
+}
+
+/* ── 보조 ── */
+function escapeHtml(s){
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+let toastTimer;
+function toast(text){
+  const t = document.getElementById('toast');
+  t.textContent = text;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 1800);
+}
+function burstStar(){
+  toast("⭐ +10점!");
+}
+
+/* ── 이벤트 연결 ── */
+document.getElementById('speakerBtn').addEventListener('click', ()=>speak(questions[current]));
+document.getElementById('replayBtn').addEventListener('click', ()=>speak(questions[current]));
+document.getElementById('checkBtn').addEventListener('click', check);
+document.getElementById('nextBtn').addEventListener('click', next);
+document.getElementById('answerInput').addEventListener('keydown', e=>{
+  if(e.key === 'Enter'){
+    if(answered) next();
+    else check();
+  }
+});
+document.getElementById('restartBtn').addEventListener('click', ()=>{
+  onlyWrongMode = false;
+  startRound(shuffle(ALL_QUESTIONS).slice(0, QUESTIONS_PER_ROUND));
+});
+document.getElementById('retryWrongBtn').addEventListener('click', ()=>{
+  onlyWrongMode = true;
+  const wrongQs = wrongList.map(w=>w.q);
+  startRound(wrongQs);
+});
+
+/* ── 첫 실행 ── */
+startRound(shuffle(ALL_QUESTIONS).slice(0, QUESTIONS_PER_ROUND));
+</script>
+</body>
+</html>
