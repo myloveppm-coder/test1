@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>또박또박 받아쓰기</title>
+<style>
+  :root{
+    --paper:#FBF6EC;
+    --line:#CBD9E8;
+    --ink:#2B3A55;
+    --accent:#F2994A;
+    --accent-2:#5AA9E6;
+    --good:#5AAF6F;
+    --bad:#E86B6B;
+    --card:#FFFFFF;
+    --shadow:0 6px 0 rgba(43,58,85,.12), 0 12px 24px rgba(43,58,85,.12);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:"Nanum Gothic","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    background:
+      radial-gradient(circle at 20% 10%, #FFF3DE 0%, transparent 40%),
+      radial-gradient(circle at 90% 80%, #E6F0FA 0%, transparent 45%),
+      var(--paper);
+    color:var(--ink);
+    min-height:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:16px;
+  }
+  .app{width:100%;max-width:560px}
+
+  header{text-align:center;margin-bottom:14px}
+  header h1{font-size:30px;letter-spacing:-1px;color:var(--ink)}
+  header h1 .dot{color:var(--accent)}
+  header p{font-size:14px;color:#7C89A0;margin-top:4px}
+
+  .card{
+    background:var(--card);
+    border-radius:24px;
+    padding:26px 22px 28px;
+    box-shadow:var(--shadow);
+  }
+
+  /* ── 로그인 화면 ── */
+  .login .who{
+    text-align:center;font-size:52px;margin-bottom:6px;
+  }
+  .login h2{text-align:center;font-size:22px;margin-bottom:20px}
+  .field{margin-bottom:16px}
+  .field label{display:block;font-size:14px;color:#7C89A0;font-weight:700;margin-bottom:8px}
+  .field input{
+    width:100%;font-family:inherit;font-size:22px;font-weight:800;
+    color:var(--ink);text-align:center;padding:14px;border:none;border-radius:14px;
+    background:#FBFDFF;box-shadow:inset 0 0 0 2px #E4ECF5;outline:none;
+  }
+  .field input:focus{box-shadow:inset 0 0 0 3px var(--accent-2)}
+  .divider{
+    display:flex;align-items:center;gap:12px;color:#B5C0D0;
+    font-size:13px;font-weight:700;margin:20px 0;
+  }
+  .divider::before,.divider::after{content:"";flex:1;height:2px;background:#EDF1F6}
+
+  /* ── 상태바 ── */
+  .status{
+    display:flex;align-items:center;justify-content:space-between;
+    background:var(--card);border-radius:18px;padding:12px 16px;
+    box-shadow:var(--shadow);margin-bottom:14px;
+  }
+  .status .stars{font-size:22px;letter-spacing:2px}
+  .status .progress-text{font-size:14px;color:#7C89A0;font-weight:700}
+  .status .score{font-weight:800;font-size:16px;color:var(--accent)}
+  .userbadge{
+    text-align:center;margin-bottom:12px;font-size:14px;color:#7C89A0;font-weight:700;
+  }
+  .userbadge b{color:var(--ink)}
+  .userbadge .code{
+    display:inline-block;background:#FFF3DE;color:var(--accent);
+    padding:2px 10px;border-radius:99px;font-weight:800;margin-left:6px;
+  }
+
+  .bar{height:10px;border-radius:99px;background:#EDE6D6;overflow:hidden;margin-bottom:18px}
+  .bar > i{display:block;height:100%;width:0;border-radius:99px;
+    background:linear-gradient(90deg,var(--accent),#F7B267);transition:width .4s ease}
+
+  /* 듣기 */
+  .listen{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:22px}
+  .speaker{
+    width:110px;height:110px;border-radius:50%;border:none;cursor:pointer;
+    background:radial-gradient(circle at 35% 30%,#FFC988,var(--accent));
+    box-shadow:0 6px 0 #D77E2E, 0 10px 20px rgba(242,153,74,.4);
+    font-size:46px;color:#fff;transition:transform .1s, box-shadow .1s;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .speaker:active{transform:translateY(4px);box-shadow:0 2px 0 #D77E2E}
+  .speaker.playing{animation:pulse 1s infinite}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+  .listen .hint{font-size:15px;color:#7C89A0;font-weight:700}
+  .replay{background:none;border:none;color:var(--accent-2);font-weight:800;
+    font-size:14px;cursor:pointer;text-decoration:underline}
+
+  /* 입력칸 */
+  .writing{position:relative;margin-bottom:18px}
+  .writing label{display:block;font-size:14px;color:#7C89A0;font-weight:700;margin-bottom:8px}
+  .notebook{
+    width:100%;font-family:inherit;font-size:26px;font-weight:800;color:var(--ink);
+    text-align:center;padding:18px 12px;border:none;border-radius:14px;
+    background:repeating-linear-gradient(transparent, transparent 47px, var(--line) 47px, var(--line) 49px);
+    background-color:#FBFDFF;box-shadow:inset 0 0 0 2px #E4ECF5;outline:none;
+  }
+  .notebook:focus{box-shadow:inset 0 0 0 3px var(--accent-2)}
+
+  .result{text-align:center;padding:6px 0 18px;display:none}
+  .result.show{display:block}
+  .result .mark{font-size:52px;line-height:1}
+  .result .msg{font-size:19px;font-weight:800;margin-top:6px}
+  .result.correct .msg{color:var(--good)}
+  .result.wrong .msg{color:var(--bad)}
+  .result .answer{margin-top:10px;font-size:16px;color:#7C89A0;font-weight:700}
+  .result .answer b{color:var(--ink);font-size:20px}
+
+  .btn{
+    width:100%;border:none;cursor:pointer;font-family:inherit;font-weight:800;
+    font-size:19px;padding:16px;border-radius:16px;color:#fff;
+    transition:transform .08s, box-shadow .08s;
+  }
+  .btn:active{transform:translateY(3px)}
+  .btn-primary{background:var(--accent-2);box-shadow:0 5px 0 #3E86BE}
+  .btn-primary:active{box-shadow:0 2px 0 #3E86BE}
+  .btn-next{background:var(--accent);box-shadow:0 5px 0 #D77E2E}
+  .btn-next:active{box-shadow:0 2px 0 #D77E2E}
+  .btn-ghost{background:#EDE6D6;color:var(--ink);box-shadow:0 4px 0 #D5CBB4}
+  .btn-ghost:active{box-shadow:0 1px 0 #D5CBB4}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn + .btn{margin-top:10px}
+
+  /* 완료 화면 */
+  .done{display:none;text-align:center}
+  .done.show{display:block}
+  .done .trophy{font-size:80px}
+  .done h2{font-size:28px;margin:10px 0 4px}
+  .done .final-stars{font-size:34px;letter-spacing:4px;margin:8px 0}
+  .done .summary{background:#FBFDFF;border-radius:14px;padding:16px;margin:16px 0;
+    font-size:16px;color:#5B6B85;font-weight:700;line-height:1.7}
+  .done .summary b{color:var(--ink)}
+
+  /* 누적 성장 */
+  .growth{
+    background:#F4FAF5;border:2px solid #D6EEDC;border-radius:16px;
+    padding:16px;margin:16px 0;text-align:left;
+  }
+  .growth h3{font-size:16px;color:var(--good);margin-bottom:12px;text-align:center}
+  .growth .stat-row{display:flex;justify-content:space-around;margin-bottom:14px}
+  .growth .stat{text-align:center}
+  .growth .stat .num{font-size:26px;font-weight:800;color:var(--ink)}
+  .growth .stat .lbl{font-size:12px;color:#7C89A0;font-weight:700;margin-top:2px}
+  .spark{display:flex;align-items:flex-end;gap:4px;height:60px;justify-content:center;margin-top:8px}
+  .spark .b{width:14px;background:linear-gradient(var(--good),#9BD8A8);border-radius:4px 4px 0 0;min-height:4px}
+  .spark-lbl{text-align:center;font-size:11px;color:#9AA7B8;margin-top:6px;font-weight:700}
+
+  /* 오답노트 */
+  .review{text-align:left;background:#FFF6F6;border:2px dashed #F3C0C0;
+    border-radius:16px;padding:16px;margin:16px 0}
+  .review h3{font-size:16px;color:var(--bad);margin-bottom:10px}
+  .review ul{list-style:none}
+  .review li{display:flex;justify-content:space-between;align-items:center;
+    padding:8px 0;border-bottom:1px solid #F3D9D9;font-size:15px}
+  .review li:last-child{border-bottom:none}
+  .review .yours{color:var(--bad);font-weight:700;text-decoration:line-through}
+  .review .right{color:var(--good);font-weight:800}
+
+  .footer-btns{display:flex;gap:10px;margin-top:6px}
+  .footer-btns .btn{font-size:16px;padding:14px;margin-top:0}
+
+  /* 선생님 현황판 */
+  .teacher{display:none}
+  .teacher.show{display:block}
+  .teacher h2{text-align:center;font-size:22px;margin-bottom:4px}
+  .teacher .sub{text-align:center;font-size:13px;color:#7C89A0;margin-bottom:18px}
+  .tbl{width:100%;border-collapse:collapse;font-size:14px}
+  .tbl th,.tbl td{padding:10px 8px;text-align:center;border-bottom:1px solid #EDF1F6}
+  .tbl th{color:#7C89A0;font-size:12px;font-weight:800}
+  .tbl td{font-weight:700;color:var(--ink)}
+  .tbl td.name{text-align:left;font-weight:800}
+  .tbl .rate-good{color:var(--good)}
+  .tbl .rate-mid{color:var(--accent)}
+  .tbl .rate-low{color:var(--bad)}
+  .empty-note{text-align:center;color:#9AA7B8;font-weight:700;padding:30px 0}
+
+  /* 작은 유틸 링크 */
+  .mini-links{text-align:center;margin-top:14px}
+  .mini-links button{
+    background:none;border:none;color:#B5C0D0;font-size:12px;font-weight:700;
+    cursor:pointer;text-decoration:underline;margin:0 8px;
+  }
+
+  .toast{
+    position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(100px);
+    background:var(--ink);color:#fff;padding:12px 22px;border-radius:99px;
+    font-weight:700;font-size:14px;opacity:0;transition:.3s;pointer-events:none;
+    box-shadow:0 8px 20px rgba(0,0,0,.25);z-index:100;
+  }
+  .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+
+  .loading{text-align:center;color:#9AA7B8;font-weight:700;padding:20px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>또박또박 받아쓰기<span class="dot">.</span></h1>
+    <p>소리를 잘 듣고 또박또박 써 보아요</p>
+  </header>
+
+  <!-- ── 로그인 화면 ── -->
+  <div class="card login" id="loginCard">
+    <div class="who">🐣</div>
+    <h2>안녕! 이름을 알려줘</h2>
+
+    <div class="field">
+      <label for="nameInput">이름 (처음이면 여기에 써요)</label>
+      <input id="nameInput" type="text" maxlength="10" placeholder="예) 김민수" autocomplete="off">
+    </div>
+    <button class="btn btn-primary" id="startNewBtn">시작하고 내 코드 받기</button>
+
+    <div class="divider">이미 코드가 있어요</div>
+
+    <div class="field">
+      <label for="codeInput">내 코드 (숫자 4자리)</label>
+      <input id="codeInput" type="text" inputmode="numeric" maxlength="4" placeholder="예) 4827" autocomplete="off">
+    </div>
+    <button class="btn btn-ghost" id="loginCodeBtn">코드로 이어서 하기</button>
+
+    <div class="mini-links">
+      <button id="teacherEntryBtn">선생님용 현황판</button>
+    </div>
+  </div>
+
+  <!-- ── 퀴즈 화면 ── -->
+  <div id="quizWrap" style="display:none">
+    <div class="userbadge" id="userBadge"></div>
+    <div class="status">
+      <span class="stars" id="stars">☆☆☆☆☆</span>
+      <span class="progress-text" id="progressText">1 / 10</span>
+      <span class="score" id="score">⭐ 0점</span>
+    </div>
+    <div class="bar"><i id="barFill"></i></div>
+
+    <div class="card" id="quizCard">
+      <div class="listen">
+        <button class="speaker" id="speakerBtn" aria-label="문제 듣기">🔊</button>
+        <span class="hint">동그란 단추를 눌러 문제를 들어요</span>
+        <button class="replay" id="replayBtn">🔁 다시 듣기</button>
+      </div>
+      <div class="writing">
+        <label for="answerInput">들은 대로 써 보세요</label>
+        <input class="notebook" id="answerInput" type="text"
+               autocomplete="off" autocorrect="off" autocapitalize="off"
+               spellcheck="false" placeholder="여기에 써요">
+      </div>
+      <div class="result" id="result">
+        <div class="mark" id="resultMark"></div>
+        <div class="msg" id="resultMsg"></div>
+        <div class="answer" id="resultAnswer"></div>
+      </div>
+      <button class="btn btn-primary" id="checkBtn">채점하기</button>
+      <button class="btn btn-next" id="nextBtn" style="display:none">다음 문제 →</button>
+    </div>
+  </div>
+
+  <!-- ── 완료 화면 ── -->
+  <div class="card done" id="doneCard">
+    <div class="trophy">🏆</div>
+    <h2>다 풀었어요!</h2>
+    <div class="final-stars" id="finalStars">⭐⭐⭐</div>
+    <div class="summary" id="doneSummary"></div>
+
+    <div class="growth" id="growthBox">
+      <h3>🌱 나의 성장 기록</h3>
+      <div class="stat-row">
+        <div class="stat"><div class="num" id="gTotal">0</div><div class="lbl">푼 문제</div></div>
+        <div class="stat"><div class="num" id="gRate">0%</div><div class="lbl">정답률</div></div>
+        <div class="stat"><div class="num" id="gRounds">0</div><div class="lbl">도전 횟수</div></div>
+      </div>
+      <div class="spark" id="spark"></div>
+      <div class="spark-lbl">최근 도전별 점수</div>
+    </div>
+
+    <div class="review" id="reviewBox" style="display:none">
+      <h3>📓 오답노트 · 다시 볼까요?</h3>
+      <ul id="reviewList"></ul>
+    </div>
+
+    <div class="footer-btns">
+      <button class="btn btn-ghost" id="retryWrongBtn" style="display:none">틀린 문제만 다시</button>
+      <button class="btn btn-next" id="restartBtn">한 판 더!</button>
+    </div>
+    <div class="mini-links">
+      <button id="logoutBtn">다른 친구로 바꾸기</button>
+    </div>
+  </div>
+
+  <!-- ── 선생님 현황판 ── -->
+  <div class="card teacher" id="teacherCard">
+    <h2>👩‍🏫 우리 반 현황판</h2>
+    <div class="sub">정답률 높은 순서로 보여줘요</div>
+    <div id="teacherBody"><div class="loading">불러오는 중…</div></div>
+    <div class="footer-btns" style="margin-top:16px">
+      <button class="btn btn-ghost" id="teacherRefreshBtn">새로고침</button>
+      <button class="btn btn-primary" id="teacherBackBtn">돌아가기</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+import {
+  getFirestore, doc, getDoc, setDoc, collection, getDocs
+} from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+
+/* ── Firebase 연결 키 ── */
+const firebaseConfig = {
+  apiKey: "AIzaSyCyX8YNIehfJqITSETyF2P3DdrzGZ84FfQ",
+  authDomain: "test1-866fe.firebaseapp.com",
+  projectId: "test1-866fe",
+  storageBucket: "test1-866fe.firebasestorage.app",
+  messagingSenderId: "972643862038",
+  appId: "1:972643862038:web:1047071e2059a1937ed737"
+};
+const fbApp = initializeApp(firebaseConfig);
+const db = getFirestore(fbApp);
+
+/* ── 문제 은행 (초2) ── */
+const ALL_QUESTIONS = [
+  "학교","친구","선생님","공책","연필","가방","우산","시계","나무","꽃밭",
+  "무지개","할머니","강아지","고양이","코끼리","해바라기","떡볶이","김밥","놀이터","도서관",
+  "나는 학교에 갑니다.",
+  "친구와 함께 놀아요.",
+  "꽃이 예쁘게 피었어요.",
+  "오늘은 날씨가 맑아요.",
+  "우리 가족은 네 명입니다.",
+  "책을 읽으면 재미있어요.",
+  "동생이 웃고 있어요.",
+  "비가 내려서 우산을 썼어요.",
+  "선생님께서 칭찬해 주셨어요.",
+  "손을 깨끗이 씻어요."
+];
+const QUESTIONS_PER_ROUND = 10;
+
+/* ── 상태 ── */
+let questions = [], current = 0, score = 0, wrongList = [], answered = false;
+let user = null;   // {code, name, totalQ, totalCorrect, rounds, history[]}
+
+/* ── 음성 ── */
+let koVoice = null;
+function pickVoice(){
+  const vs = speechSynthesis.getVoices();
+  koVoice = vs.find(v=>v.lang==="ko-KR") || vs.find(v=>v.lang&&v.lang.startsWith("ko")) || null;
+}
+if('speechSynthesis' in window){ pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+function speak(text){
+  if(!('speechSynthesis' in window)){ toast("이 브라우저는 소리 읽기를 지원하지 않아요"); return; }
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang="ko-KR"; if(koVoice)u.voice=koVoice; u.rate=0.85; u.pitch=1.05;
+  const btn = document.getElementById('speakerBtn');
+  u.onstart=()=>btn.classList.add('playing');
+  u.onend=()=>btn.classList.remove('playing');
+  u.onerror=()=>btn.classList.remove('playing');
+  speechSynthesis.speak(u);
+}
+
+/* ── 화면 전환 ── */
+function show(which){
+  document.getElementById('loginCard').style.display   = which==='login'  ?'block':'none';
+  document.getElementById('quizWrap').style.display    = which==='quiz'   ?'block':'none';
+  document.getElementById('doneCard').classList.toggle('show', which==='done');
+  document.getElementById('teacherCard').classList.toggle('show', which==='teacher');
+}
+
+/* ── 코드 생성 (중복 안 나게) ── */
+async function makeUniqueCode(){
+  for(let i=0;i<20;i++){
+    const code = String(Math.floor(1000 + Math.random()*9000)); // 1000~9999
+    const snap = await getDoc(doc(db,"students",code));
+    if(!snap.exists()) return code;
+  }
+  return String(Date.now()).slice(-4);
+}
+
+/* ── 새 학생 시작 ── */
+async function startNew(){
+  const name = document.getElementById('nameInput').value.trim();
+  if(name===""){ toast("이름을 먼저 써 주세요 ✏️"); return; }
+  const btn = document.getElementById('startNewBtn');
+  btn.disabled = true; btn.textContent = "코드 만드는 중…";
+  try{
+    const code = await makeUniqueCode();
+    user = { code, name, totalQ:0, totalCorrect:0, rounds:0, history:[] };
+    await setDoc(doc(db,"students",code), user);
+    toast("네 코드는 "+code+" 야! 꼭 기억해 🔑");
+    beginRound();
+  }catch(e){
+    toast("연결에 문제가 있어요. 잠시 후 다시");
+    console.error(e);
+  }finally{
+    btn.disabled=false; btn.textContent="시작하고 내 코드 받기";
+  }
+}
+
+/* ── 코드로 로그인 ── */
+async function loginByCode(){
+  const code = document.getElementById('codeInput').value.trim();
+  if(!/^\d{4}$/.test(code)){ toast("숫자 4자리를 써 주세요"); return; }
+  const btn = document.getElementById('loginCodeBtn');
+  btn.disabled=true; btn.textContent="찾는 중…";
+  try{
+    const snap = await getDoc(doc(db,"students",code));
+    if(!snap.exists()){ toast("그 코드를 못 찾았어요. 다시 확인해요"); return; }
+    user = snap.data();
+    user.code = code;
+    if(!user.history) user.history=[];
+    toast(user.name+"! 다시 왔구나 😊");
+    beginRound();
+  }catch(e){
+    toast("연결에 문제가 있어요. 잠시 후 다시");
+    console.error(e);
+  }finally{
+    btn.disabled=false; btn.textContent="코드로 이어서 하기";
+  }
+}
+
+/* ── 판 시작 ── */
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function beginRound(list){
+  questions = list || shuffle(ALL_QUESTIONS).slice(0,QUESTIONS_PER_ROUND);
+  current=0; score=0; wrongList=[]; answered=false;
+  document.getElementById('userBadge').innerHTML =
+    "<b>"+escapeHtml(user.name)+"</b> 친구 <span class='code'>🔑 "+user.code+"</span>";
+  show('quiz');
+  loadQuestion();
+}
+
+function loadQuestion(){
+  answered=false;
+  const input=document.getElementById('answerInput');
+  input.value=""; input.disabled=false; input.focus();
+  document.getElementById('result').className='result';
+  document.getElementById('checkBtn').style.display='block';
+  document.getElementById('checkBtn').disabled=false;
+  document.getElementById('nextBtn').style.display='none';
+  updateStatus();
+  setTimeout(()=>speak(questions[current]),350);
+}
+
+function normalize(s){return s.replace(/\s+/g,"").replace(/[.,!?~…·]/g,"").trim();}
+
+function check(){
+  if(answered)return;
+  const input=document.getElementById('answerInput');
+  const mine=input.value.trim();
+  if(mine===""){toast("먼저 답을 써 주세요 ✏️");input.focus();return;}
+  answered=true; input.disabled=true;
+  const ans=questions[current];
+  const ok=normalize(mine)===normalize(ans);
+  const result=document.getElementById('result');
+  const mark=document.getElementById('resultMark');
+  const msg=document.getElementById('resultMsg');
+  const ansEl=document.getElementById('resultAnswer');
+  if(ok){
+    score+=10; result.className='result show correct';
+    mark.textContent="⭕"; msg.textContent="정답이에요! 잘했어요";
+    ansEl.innerHTML=""; toast("⭐ +10점!");
+  }else{
+    result.className='result show wrong';
+    mark.textContent="❌"; msg.textContent="아쉬워요, 다시 볼까요?";
+    ansEl.innerHTML="정답: <b>"+escapeHtml(ans)+"</b>";
+    wrongList.push({q:ans,mine});
+  }
+  document.getElementById('checkBtn').style.display='none';
+  const nx=document.getElementById('nextBtn');
+  nx.style.display='block';
+  nx.textContent=(current===questions.length-1)?"결과 보기 🎉":"다음 문제 →";
+  nx.focus();
+  updateStatus();
+}
+
+function next(){ if(current<questions.length-1){current++;loadQuestion();} else finish(); }
+
+function updateStatus(){
+  document.getElementById('progressText').textContent=(current+1)+" / "+questions.length;
+  document.getElementById('score').textContent="⭐ "+score+"점";
+  document.getElementById('barFill').style.width=((current+(answered?1:0))/questions.length*100)+"%";
+  const earned=Math.min(5,Math.round(score/10/questions.length*5));
+  document.getElementById('stars').textContent="★".repeat(earned)+"☆".repeat(5-earned);
+}
+
+/* ── 완료 + DB 저장 ── */
+async function finish(){
+  const total=questions.length;
+  const correct=total-wrongList.length;
+
+  // 누적 갱신
+  user.totalQ = (user.totalQ||0) + total;
+  user.totalCorrect = (user.totalCorrect||0) + correct;
+  user.rounds = (user.rounds||0) + 1;
+  user.history = (user.history||[]).concat([{
+    date: new Date().toISOString().slice(0,10),
+    score, correct, total
+  }]).slice(-20); // 최근 20회만 보관
+
+  // 저장
+  try{ await setDoc(doc(db,"students",user.code), user); }
+  catch(e){ console.error(e); toast("기록 저장에 실패했어요"); }
+
+  // 화면
+  show('done');
+  const starCount=Math.max(1,Math.round(correct/total*3));
+  document.getElementById('finalStars').textContent="⭐".repeat(starCount)+"☆".repeat(3-starCount);
+  document.getElementById('doneSummary').innerHTML=
+    "<b>"+total+"문제</b> 중 <b style='color:var(--good)'>"+correct+"개</b> 맞혔어요! · 점수 <b>"+score+"점</b>"+
+    (wrongList.length===0?"<br>🎊 하나도 안 틀렸어요! 최고예요!":"");
+
+  // 누적 성장
+  const rate = user.totalQ ? Math.round(user.totalCorrect/user.totalQ*100) : 0;
+  document.getElementById('gTotal').textContent = user.totalQ;
+  document.getElementById('gRate').textContent = rate+"%";
+  document.getElementById('gRounds').textContent = user.rounds;
+  drawSpark(user.history);
+
+  // 오답노트
+  const rBox=document.getElementById('reviewBox');
+  const rList=document.getElementById('reviewList');
+  const retry=document.getElementById('retryWrongBtn');
+  if(wrongList.length>0){
+    rBox.style.display='block'; retry.style.display='block';
+    rList.innerHTML=wrongList.map(w=>
+      "<li><span class='yours'>"+escapeHtml(w.mine)+"</span><span class='right'>"+escapeHtml(w.q)+"</span></li>"
+    ).join("");
+  }else{ rBox.style.display='none'; retry.style.display='none'; }
+}
+
+function drawSpark(history){
+  const el=document.getElementById('spark');
+  const h=(history||[]).slice(-10);
+  if(h.length===0){ el.innerHTML="<span style='color:#9AA7B8;font-size:12px'>아직 기록이 없어요</span>"; return; }
+  const max=Math.max(...h.map(x=>x.score),100);
+  el.innerHTML=h.map(x=>{
+    const ht=Math.max(4, Math.round(x.score/max*56));
+    return "<div class='b' style='height:"+ht+"px' title='"+x.score+"점'></div>";
+  }).join("");
+}
+
+/* ── 선생님 현황판 ── */
+async function openTeacher(){
+  show('teacher');
+  const body=document.getElementById('teacherBody');
+  body.innerHTML="<div class='loading'>불러오는 중…</div>";
+  try{
+    const snap=await getDocs(collection(db,"students"));
+    const rows=[];
+    snap.forEach(d=>{
+      const s=d.data();
+      const rate=s.totalQ?Math.round(s.totalCorrect/s.totalQ*100):0;
+      rows.push({name:s.name||"(이름없음)",code:d.id,rate,totalQ:s.totalQ||0,rounds:s.rounds||0});
+    });
+    if(rows.length===0){ body.innerHTML="<div class='empty-note'>아직 참여한 친구가 없어요 🙂</div>"; return; }
+    rows.sort((a,b)=>b.rate-a.rate);
+    let html="<table class='tbl'><thead><tr><th>이름</th><th>코드</th><th>정답률</th><th>푼 문제</th><th>도전</th></tr></thead><tbody>";
+    rows.forEach(r=>{
+      const cls=r.rate>=80?'rate-good':r.rate>=50?'rate-mid':'rate-low';
+      html+="<tr><td class='name'>"+escapeHtml(r.name)+"</td><td>"+r.code+"</td>"+
+            "<td class='"+cls+"'>"+r.rate+"%</td><td>"+r.totalQ+"</td><td>"+r.rounds+"</td></tr>";
+    });
+    html+="</tbody></table>";
+    body.innerHTML=html;
+  }catch(e){
+    console.error(e);
+    body.innerHTML="<div class='empty-note'>불러오지 못했어요. 잠시 후 다시 해요</div>";
+  }
+}
+
+/* ── 유틸 ── */
+function escapeHtml(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+let toastTimer;
+function toast(t){
+  const el=document.getElementById('toast');
+  el.textContent=t; el.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>el.classList.remove('show'),2200);
+}
+
+/* ── 이벤트 ── */
+document.getElementById('startNewBtn').addEventListener('click', startNew);
+document.getElementById('loginCodeBtn').addEventListener('click', loginByCode);
+document.getElementById('teacherEntryBtn').addEventListener('click', openTeacher);
+document.getElementById('teacherBackBtn').addEventListener('click', ()=>show('login'));
+document.getElementById('teacherRefreshBtn').addEventListener('click', openTeacher);
+document.getElementById('speakerBtn').addEventListener('click', ()=>speak(questions[current]));
+document.getElementById('replayBtn').addEventListener('click', ()=>speak(questions[current]));
+document.getElementById('checkBtn').addEventListener('click', check);
+document.getElementById('nextBtn').addEventListener('click', next);
+document.getElementById('answerInput').addEventListener('keydown', e=>{
+  if(e.key==='Enter'){ answered?next():check(); }
+});
+document.getElementById('nameInput').addEventListener('keydown', e=>{ if(e.key==='Enter') startNew(); });
+document.getElementById('codeInput').addEventListener('keydown', e=>{ if(e.key==='Enter') loginByCode(); });
+document.getElementById('restartBtn').addEventListener('click', ()=>beginRound());
+document.getElementById('retryWrongBtn').addEventListener('click', ()=>beginRound(wrongList.map(w=>w.q)));
+document.getElementById('logoutBtn').addEventListener('click', ()=>{ user=null; show('login'); });
+
+/* 시작 */
+show('login');
+</script>
+</body>
+</html>
