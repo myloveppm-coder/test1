@@ -21,8 +21,10 @@
   body{
     font-family:"Nanum Gothic","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
     background:
-      radial-gradient(circle at 20% 10%, #FFF3DE 0%, transparent 40%),
-      radial-gradient(circle at 90% 80%, #E6F0FA 0%, transparent 45%),
+      radial-gradient(circle at 15% 0%, #FFE3EE 0%, transparent 45%),
+      radial-gradient(circle at 100% 15%, #FFF3DE 0%, transparent 45%),
+      radial-gradient(circle at 90% 95%, #E6F0FA 0%, transparent 50%),
+      radial-gradient(circle at 5% 90%, #EAFBF0 0%, transparent 45%),
       var(--paper);
     color:var(--ink);
     min-height:100%;
@@ -44,11 +46,20 @@
   .sky-deco span:nth-child(5){left:48%;top:6%;font-size:24px;animation-delay:1.8s}
   @keyframes float{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-16px) rotate(4deg)}}
 
-  header{text-align:center;margin-bottom:14px}
-  header h1{font-size:30px;letter-spacing:-1px;color:var(--ink)}
-  header h1 .dot{color:var(--accent);display:inline-block;animation:dotbounce 1.4s ease-in-out infinite}
-  @keyframes dotbounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
-  header p{font-size:14px;color:#7C89A0;margin-top:4px}
+  header{text-align:center;margin-bottom:22px}
+  .brand-chip{
+    display:inline-flex;align-items:center;gap:9px;
+    background:rgba(255,255,255,.75);backdrop-filter:blur(6px);
+    padding:9px 20px;border-radius:99px;
+    box-shadow:0 4px 14px rgba(43,58,85,.12), inset 0 0 0 1px rgba(255,255,255,.6);
+    font-weight:800;font-size:16px;color:var(--ink);letter-spacing:-.5px;
+  }
+  .brand-chip .pulse-dot{
+    width:9px;height:9px;border-radius:50%;background:var(--accent);display:inline-block;
+    animation:dotpulse 1.4s ease-in-out infinite;
+  }
+  @keyframes dotpulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.6);opacity:.5}}
+  header p{font-size:13px;color:#8C96A8;margin-top:8px;font-weight:700}
 
   .card{
     background:var(--card);
@@ -60,6 +71,7 @@
   /* ── 로그인 화면 ── */
   .login{
     position:relative;overflow:visible;
+    padding-top:66px;
     border:3px solid #FFE7C4;
     background:
       radial-gradient(circle at 50% -30%, #FFF6E6 0%, transparent 60%),
@@ -67,16 +79,45 @@
     animation:cardpop .5s cubic-bezier(.34,1.56,.64,1);
   }
   @keyframes cardpop{0%{transform:scale(.9) translateY(10px);opacity:0}100%{transform:scale(1) translateY(0);opacity:1}}
-  .login .who{
-    text-align:center;font-size:66px;margin-bottom:2px;line-height:1;
-    display:inline-block;width:100%;
+
+  .mascot-badge{
+    position:absolute;top:-58px;left:50%;transform:translateX(-50%);
+    width:112px;height:112px;border-radius:50%;
+    background:radial-gradient(circle at 35% 28%,#FFF6DC,#FFD98A 55%,#FFC172 100%);
+    display:flex;align-items:center;justify-content:center;font-size:58px;line-height:1;
+    box-shadow:0 8px 0 #E8A94A, 0 16px 28px rgba(43,58,85,.22), inset 0 0 0 5px #fff;
     animation:hatch 2.4s ease-in-out infinite;transform-origin:bottom center;
+    z-index:3;
   }
-  @keyframes hatch{0%,88%,100%{transform:translateY(0) rotate(0)}
-    92%{transform:translateY(-8px) rotate(-8deg)}96%{transform:translateY(-8px) rotate(8deg)}}
-  .login h2{text-align:center;font-size:22px;margin-bottom:20px}
-  .login h2 .wave{display:inline-block;animation:wave 1.6s ease-in-out infinite;transform-origin:70% 70%}
+  @keyframes hatch{0%,88%,100%{transform:translateX(-50%) translateY(0) rotate(0)}
+    92%{transform:translateX(-50%) translateY(-8px) rotate(-8deg)}
+    96%{transform:translateX(-50%) translateY(-8px) rotate(8deg)}}
+
+  .speech-bubble{
+    position:relative;display:block;width:fit-content;margin:0 auto 22px;
+    background:#FFF9F0;border:2px solid #FFE7C4;color:var(--ink);
+    font-weight:800;font-size:16px;padding:10px 20px;border-radius:16px;
+    text-align:center;
+  }
+  .speech-bubble::after{
+    content:"";position:absolute;top:-9px;left:50%;transform:translateX(-50%) rotate(45deg);
+    width:14px;height:14px;background:#FFF9F0;border-left:2px solid #FFE7C4;border-top:2px solid #FFE7C4;
+  }
+  .speech-bubble .wave{display:inline-block;margin-right:4px;animation:wave 1.6s ease-in-out infinite;transform-origin:70% 70%}
   @keyframes wave{0%,60%,100%{transform:rotate(0)}70%{transform:rotate(16deg)}80%{transform:rotate(-8deg)}90%{transform:rotate(12deg)}}
+
+  /* 탭 전환 */
+  .tabbar{display:flex;gap:6px;background:#F2F5FA;padding:6px;border-radius:16px;margin-bottom:20px}
+  .tab-btn{
+    flex:1;border:none;background:transparent;cursor:pointer;font-family:inherit;
+    padding:12px 8px;border-radius:12px;font-weight:800;font-size:14px;color:#93A0B4;
+    transition:.2s;
+  }
+  .tab-btn.active{background:#fff;color:var(--ink);box-shadow:0 4px 10px rgba(43,58,85,.1)}
+  .tab-panel{display:none}
+  .tab-panel.active{display:block;animation:panelIn .3s ease}
+  @keyframes panelIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
   .field{margin-bottom:16px}
   .field label{display:block;font-size:14px;color:#7C89A0;font-weight:700;margin-bottom:8px}
   .field input{
@@ -85,12 +126,6 @@
     background:#FBFDFF;box-shadow:inset 0 0 0 2px #E4ECF5;outline:none;
   }
   .field input:focus{box-shadow:inset 0 0 0 3px var(--accent-2)}
-  .divider{
-    display:flex;align-items:center;gap:12px;color:#B5C0D0;
-    font-size:13px;font-weight:700;margin:20px 0;
-  }
-  .divider::before,.divider::after{content:"";flex:1;height:2px;
-    background:repeating-linear-gradient(90deg,#EDF1F6,#EDF1F6 6px,transparent 6px,transparent 12px)}
 
   /* ── 상태바 ── */
   .status{
@@ -262,28 +297,35 @@
 </div>
 <div class="app">
   <header>
-    <h1>또박또박 받아쓰기<span class="dot">.</span></h1>
+    <div class="brand-chip"><span class="pulse-dot"></span>또박또박 받아쓰기</div>
     <p>소리를 잘 듣고 또박또박 써 보아요</p>
   </header>
 
   <!-- ── 로그인 화면 ── -->
   <div class="card login" id="loginCard">
-    <div class="who">🐣</div>
-    <h2><span class="wave">👋</span> 안녕! 이름을 알려줘</h2>
+    <div class="mascot-badge">🐣</div>
+    <div class="speech-bubble"><span class="wave">👋</span>안녕! 어떻게 시작할까?</div>
 
-    <div class="field">
-      <label for="nameInput">이름 (처음이면 여기에 써요)</label>
-      <input id="nameInput" type="text" maxlength="10" placeholder="예) 김민수" autocomplete="off">
+    <div class="tabbar">
+      <button class="tab-btn active" id="tabNewBtn" type="button">🆕 처음이에요</button>
+      <button class="tab-btn" id="tabCodeBtn" type="button">🔑 코드가 있어요</button>
     </div>
-    <button class="btn btn-primary" id="startNewBtn">시작하고 내 코드 받기</button>
 
-    <div class="divider">이미 코드가 있어요</div>
-
-    <div class="field">
-      <label for="codeInput">내 코드 (숫자 4자리)</label>
-      <input id="codeInput" type="text" inputmode="numeric" maxlength="4" placeholder="예) 4827" autocomplete="off">
+    <div class="tab-panel active" id="panelNew">
+      <div class="field">
+        <label for="nameInput">이름 (처음이면 여기에 써요)</label>
+        <input id="nameInput" type="text" maxlength="10" placeholder="예) 김민수" autocomplete="off">
+      </div>
+      <button class="btn btn-primary" id="startNewBtn">시작하고 내 코드 받기</button>
     </div>
-    <button class="btn btn-ghost" id="loginCodeBtn">코드로 이어서 하기</button>
+
+    <div class="tab-panel" id="panelCode">
+      <div class="field">
+        <label for="codeInput">내 코드 (숫자 4자리)</label>
+        <input id="codeInput" type="text" inputmode="numeric" maxlength="4" placeholder="예) 4827" autocomplete="off">
+      </div>
+      <button class="btn btn-ghost" id="loginCodeBtn">코드로 이어서 하기</button>
+    </div>
 
     <div class="mini-links">
       <button id="teacherEntryBtn">선생님용 현황판</button>
@@ -661,6 +703,16 @@ function toast(t){
   el.textContent=t; el.classList.add('show');
   clearTimeout(toastTimer); toastTimer=setTimeout(()=>el.classList.remove('show'),2200);
 }
+
+/* ── 로그인 탭 전환 ── */
+function switchTab(which){
+  document.getElementById('tabNewBtn').classList.toggle('active', which==='new');
+  document.getElementById('tabCodeBtn').classList.toggle('active', which==='code');
+  document.getElementById('panelNew').classList.toggle('active', which==='new');
+  document.getElementById('panelCode').classList.toggle('active', which==='code');
+}
+document.getElementById('tabNewBtn').addEventListener('click', ()=>switchTab('new'));
+document.getElementById('tabCodeBtn').addEventListener('click', ()=>switchTab('code'));
 
 /* ── 이벤트 ── */
 document.getElementById('startNewBtn').addEventListener('click', startNew);
