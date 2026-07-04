@@ -153,15 +153,32 @@
   /* 듣기 */
   .listen{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:22px}
   .speaker{
-    width:110px;height:110px;border-radius:50%;border:none;cursor:pointer;
+    width:110px;height:110px;border-radius:50%;border:none;cursor:pointer;position:relative;
     background:radial-gradient(circle at 35% 30%,#FFC988,var(--accent));
     box-shadow:0 6px 0 #D77E2E, 0 10px 20px rgba(242,153,74,.4);
-    font-size:46px;color:#fff;transition:transform .1s, box-shadow .1s;
-    display:flex;align-items:center;justify-content:center;
+    transition:transform .1s, box-shadow .1s;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;
   }
   .speaker:active{transform:translateY(4px);box-shadow:0 2px 0 #D77E2E}
   .speaker.playing{animation:pulse 1s infinite}
   @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+  .sp-eyes{display:flex;gap:18px}
+  .sp-eyes span{width:8px;height:8px;border-radius:50%;background:#fff}
+  .sp-mouth{
+    background:#6B2E13;border-radius:4px;width:22px;height:6px;
+    transition:width .12s ease, height .12s ease, border-radius .12s ease;
+  }
+  .sp-mouth.wide{width:36px;height:30px;border-radius:50%}
+  .sp-mouth.med{width:28px;height:18px;border-radius:50%}
+  .sp-mouth.round{width:16px;height:16px;border-radius:50%}
+  .sp-mouth.flat{width:22px;height:6px;border-radius:4px}
+  .sp-mouth.smile{width:38px;height:8px;border-radius:4px}
+  .sp-mouth.closed{width:22px;height:6px;border-radius:4px}
+  .speaker-badge{
+    position:absolute;right:-4px;bottom:-4px;width:34px;height:34px;border-radius:50%;
+    background:#fff;box-shadow:0 3px 8px rgba(43,58,85,.25);
+    display:flex;align-items:center;justify-content:center;font-size:17px;
+  }
   .listen .hint{font-size:15px;color:#7C89A0;font-weight:700}
   .replay{background:none;border:none;color:var(--accent-2);font-weight:800;
     font-size:14px;cursor:pointer;text-decoration:underline}
@@ -356,8 +373,12 @@
 
     <div class="card" id="quizCard">
       <div class="listen">
-        <button class="speaker" id="speakerBtn" aria-label="문제 듣기">🔊</button>
-        <span class="hint">동그란 단추를 눌러 문제를 들어요</span>
+        <button class="speaker" id="speakerBtn" aria-label="문제 듣기">
+          <div class="sp-eyes"><span></span><span></span></div>
+          <div class="sp-mouth closed" id="mouthShape"></div>
+          <span class="speaker-badge">🔊</span>
+        </button>
+        <span class="hint">동그란 단추를 눌러 입모양을 보고 들어요</span>
         <button class="replay" id="replayBtn">🔁 다시 듣기</button>
         <div class="speed-picker">
           <span class="speed-label">읽기 속도</span>
@@ -486,13 +507,39 @@ function pickVoice(){
 }
 if('speechSynthesis' in window){ pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
 
+/* ── 입모양(비저메) ── */
+const VISEME_BY_MEDIAL = ['wide','med','wide','med','med','med','med','med','round','wide','med','round','round','round','med','med','round','round','flat','flat','smile'];
+function getViseme(ch){
+  const code = ch.codePointAt(0);
+  if(code<0xAC00 || code>0xD7A3) return null;
+  const medial = Math.floor((code-0xAC00)/28) % 21;
+  return VISEME_BY_MEDIAL[medial];
+}
+function setMouth(shape){
+  const el=document.getElementById('mouthShape');
+  el.className='sp-mouth '+shape;
+}
+function mouthCycle(word){
+  const syll = Array.from(word).filter(ch=>getViseme(ch));
+  if(syll.length===0) return ()=>setMouth('closed');
+  let i=0;
+  setMouth(getViseme(syll[0]));
+  const per = Math.max(160, 420/speechRate);
+  const timer = setInterval(()=>{
+    i=(i+1)%syll.length;
+    setMouth(getViseme(syll[i]));
+  }, per);
+  return ()=>{ clearInterval(timer); setMouth('closed'); };
+}
+
 function speakOnce(text, onDone){
   const u = new SpeechSynthesisUtterance(text);
   u.lang="ko-KR"; if(koVoice)u.voice=koVoice; u.rate=speechRate; u.pitch=1.05;
   const btn = document.getElementById('speakerBtn');
-  u.onstart=()=>btn.classList.add('playing');
-  u.onend=()=>{ btn.classList.remove('playing'); if(onDone) onDone(); };
-  u.onerror=()=>{ btn.classList.remove('playing'); if(onDone) onDone(); };
+  let stopMouth=()=>{};
+  u.onstart=()=>{ btn.classList.add('playing'); stopMouth=mouthCycle(text); };
+  u.onend=()=>{ btn.classList.remove('playing'); stopMouth(); if(onDone) onDone(); };
+  u.onerror=()=>{ btn.classList.remove('playing'); stopMouth(); if(onDone) onDone(); };
   speechSynthesis.speak(u);
 }
 // 자동 두 번 연속 읽기
