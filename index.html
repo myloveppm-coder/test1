@@ -178,16 +178,21 @@
     box-shadow:0 3px 0 #3E86BE;
   }
 
-  /* 입력칸 */
+  /* 손글씨 입력칸 */
   .writing{position:relative;margin-bottom:18px}
   .writing label{display:block;font-size:14px;color:#7C89A0;font-weight:700;margin-bottom:8px}
-  .notebook{
-    width:100%;font-family:inherit;font-size:26px;font-weight:800;color:var(--ink);
-    text-align:center;padding:18px 12px;border:none;border-radius:14px;
+  .pad-wrap{position:relative}
+  .notebook-pad{
+    display:block;width:100%;height:170px;border-radius:14px;
     background:repeating-linear-gradient(transparent, transparent 47px, var(--line) 47px, var(--line) 49px);
-    background-color:#FBFDFF;box-shadow:inset 0 0 0 2px #E4ECF5;outline:none;
+    background-color:#FBFDFF;box-shadow:inset 0 0 0 2px #E4ECF5;
+    touch-action:none;cursor:crosshair;
   }
-  .notebook:focus{box-shadow:inset 0 0 0 3px var(--accent-2)}
+  .pad-clear{
+    position:absolute;top:10px;right:10px;background:#fff;border:2px solid #E4ECF5;
+    color:#7C89A0;font-weight:800;font-size:12px;padding:6px 12px;border-radius:99px;cursor:pointer;
+  }
+  .pad-clear:active{transform:translateY(1px)}
 
   .result{text-align:center;padding:6px 0 18px;display:none}
   .result.show{display:block}
@@ -197,6 +202,12 @@
   .result.wrong .msg{color:var(--bad)}
   .result .answer{margin-top:10px;font-size:16px;color:#7C89A0;font-weight:700}
   .result .answer b{color:var(--ink);font-size:20px}
+  .self-check{display:flex;gap:10px;margin-top:14px}
+  .self-btn{font-size:16px;padding:14px}
+  .self-btn.ok{background:var(--good);box-shadow:0 5px 0 #438957}
+  .self-btn.ok:active{box-shadow:0 2px 0 #438957}
+  .self-btn.no{background:var(--bad);box-shadow:0 5px 0 #C24C4C}
+  .self-btn.no:active{box-shadow:0 2px 0 #C24C4C}
 
   .btn{
     width:100%;border:none;cursor:pointer;font-family:inherit;font-weight:800;
@@ -253,7 +264,7 @@
   .review li{display:flex;justify-content:space-between;align-items:center;
     padding:8px 0;border-bottom:1px solid #F3D9D9;font-size:15px}
   .review li:last-child{border-bottom:none}
-  .review .yours{color:var(--bad);font-weight:700;text-decoration:line-through}
+  .review .hw-thumb{height:34px;border-radius:6px;background:#fff;box-shadow:inset 0 0 0 1px #F3D9D9}
   .review .right{color:var(--good);font-weight:800}
 
   .footer-btns{display:flex;gap:10px;margin-top:6px}
@@ -358,17 +369,22 @@
         </div>
       </div>
       <div class="writing">
-        <label for="answerInput">들은 대로 써 보세요</label>
-        <input class="notebook" id="answerInput" type="text"
-               autocomplete="off" autocorrect="off" autocapitalize="off"
-               spellcheck="false" placeholder="여기에 써요">
+        <label for="answerPad">들은 대로 여기에 손으로 써 보세요</label>
+        <div class="pad-wrap">
+          <canvas class="notebook-pad" id="answerPad"></canvas>
+          <button class="pad-clear" id="clearPadBtn" type="button">🧹 지우기</button>
+        </div>
       </div>
       <div class="result" id="result">
+        <div class="answer" id="resultAnswer"></div>
+        <div class="self-check" id="selfCheck">
+          <button class="btn self-btn ok" id="markCorrectBtn" type="button">⭕ 맞았어요</button>
+          <button class="btn self-btn no" id="markWrongBtn" type="button">❌ 틀렸어요</button>
+        </div>
         <div class="mark" id="resultMark"></div>
         <div class="msg" id="resultMsg"></div>
-        <div class="answer" id="resultAnswer"></div>
       </div>
-      <button class="btn btn-primary" id="checkBtn">채점하기</button>
+      <button class="btn btn-primary" id="checkBtn">정답 확인하기</button>
       <button class="btn btn-next" id="nextBtn" style="display:none">다음 문제 →</button>
     </div>
   </div>
@@ -486,6 +502,46 @@ function speak(text){
   speakOnce(text, ()=>{ setTimeout(()=>speakOnce(text), 500); });
 }
 
+/* ── 손글씨 캔버스 ── */
+const answerPad = document.getElementById('answerPad');
+const padCtx = answerPad.getContext('2d');
+let padDrawing = false, padLastX = 0, padLastY = 0;
+
+function resizePad(){
+  const rect = answerPad.getBoundingClientRect();
+  if(rect.width===0 || rect.height===0) return;
+  const ratio = window.devicePixelRatio || 1;
+  answerPad.width = rect.width * ratio;
+  answerPad.height = rect.height * ratio;
+  padCtx.scale(ratio, ratio);
+  padCtx.lineWidth = 4;
+  padCtx.lineCap = 'round';
+  padCtx.lineJoin = 'round';
+  padCtx.strokeStyle = '#2B3A55';
+}
+function clearPad(){ padCtx.clearRect(0,0,answerPad.width,answerPad.height); }
+function isPadEmpty(){
+  const data = padCtx.getImageData(0,0,answerPad.width,answerPad.height).data;
+  for(let i=3;i<data.length;i+=4){ if(data[i]!==0) return false; }
+  return true;
+}
+function padPos(e){
+  const rect = answerPad.getBoundingClientRect();
+  return { x:e.clientX-rect.left, y:e.clientY-rect.top };
+}
+answerPad.addEventListener('pointerdown', e=>{
+  padDrawing=true;
+  const p=padPos(e); padLastX=p.x; padLastY=p.y;
+});
+answerPad.addEventListener('pointermove', e=>{
+  if(!padDrawing)return;
+  const p=padPos(e);
+  padCtx.beginPath(); padCtx.moveTo(padLastX,padLastY); padCtx.lineTo(p.x,p.y); padCtx.stroke();
+  padLastX=p.x; padLastY=p.y;
+});
+window.addEventListener('pointerup', ()=>{ padDrawing=false; });
+window.addEventListener('resize', resizePad);
+
 /* ── 화면 전환 ── */
 function show(which){
   document.getElementById('loginCard').style.display   = which==='login'  ?'block':'none';
@@ -559,9 +615,12 @@ function beginRound(list){
 
 function loadQuestion(){
   answered=false;
-  const input=document.getElementById('answerInput');
-  input.value=""; input.disabled=false; input.focus();
+  resizePad();
   document.getElementById('result').className='result';
+  document.getElementById('resultAnswer').innerHTML='';
+  document.getElementById('resultMark').textContent='';
+  document.getElementById('resultMsg').textContent='';
+  document.getElementById('selfCheck').style.display='none';
   document.getElementById('checkBtn').style.display='block';
   document.getElementById('checkBtn').disabled=false;
   document.getElementById('nextBtn').style.display='none';
@@ -569,31 +628,33 @@ function loadQuestion(){
   setTimeout(()=>speak(questions[current]),350);
 }
 
-function normalize(s){return s.replace(/\s+/g,"").replace(/[.,!?~…·]/g,"").trim();}
-
-function check(){
+function reveal(){
   if(answered)return;
-  const input=document.getElementById('answerInput');
-  const mine=input.value.trim();
-  if(mine===""){toast("먼저 답을 써 주세요 ✏️");input.focus();return;}
-  answered=true; input.disabled=true;
+  if(isPadEmpty()){ toast("먼저 답을 써 주세요 ✏️"); return; }
   const ans=questions[current];
-  const ok=normalize(mine)===normalize(ans);
+  document.getElementById('checkBtn').style.display='none';
+  const result=document.getElementById('result');
+  result.className='result show';
+  document.getElementById('resultAnswer').innerHTML="정답: <b>"+escapeHtml(ans)+"</b>";
+  document.getElementById('selfCheck').style.display='flex';
+}
+
+function markSelf(isCorrect){
+  if(answered)return;
+  answered=true;
+  const ans=questions[current];
   const result=document.getElementById('result');
   const mark=document.getElementById('resultMark');
   const msg=document.getElementById('resultMsg');
-  const ansEl=document.getElementById('resultAnswer');
-  if(ok){
-    score+=10; result.className='result show correct';
-    mark.textContent="⭕"; msg.textContent="정답이에요! 잘했어요";
-    ansEl.innerHTML=""; toast("⭐ +10점!");
+  document.getElementById('selfCheck').style.display='none';
+  if(isCorrect){
+    score+=10; result.classList.add('correct');
+    mark.textContent="⭕"; msg.textContent="정답이에요! 잘했어요"; toast("⭐ +10점!");
   }else{
-    result.className='result show wrong';
+    result.classList.add('wrong');
     mark.textContent="❌"; msg.textContent="아쉬워요, 다시 볼까요?";
-    ansEl.innerHTML="정답: <b>"+escapeHtml(ans)+"</b>";
-    wrongList.push({q:ans,mine});
+    wrongList.push({q:ans, mineImg:answerPad.toDataURL('image/png')});
   }
-  document.getElementById('checkBtn').style.display='none';
   const nx=document.getElementById('nextBtn');
   nx.style.display='block';
   nx.textContent=(current===questions.length-1)?"결과 보기 🎉":"다음 문제 →";
@@ -651,7 +712,7 @@ async function finish(){
   if(wrongList.length>0){
     rBox.style.display='block'; retry.style.display='block';
     rList.innerHTML=wrongList.map(w=>
-      "<li><span class='yours'>"+escapeHtml(w.mine)+"</span><span class='right'>"+escapeHtml(w.q)+"</span></li>"
+      "<li><img class='hw-thumb' src='"+w.mineImg+"' alt='내가 쓴 글씨'><span class='right'>"+escapeHtml(w.q)+"</span></li>"
     ).join("");
   }else{ rBox.style.display='none'; retry.style.display='none'; }
 }
@@ -723,11 +784,11 @@ document.getElementById('teacherBackBtn').addEventListener('click', ()=>show('lo
 document.getElementById('teacherRefreshBtn').addEventListener('click', openTeacher);
 document.getElementById('speakerBtn').addEventListener('click', ()=>speak(questions[current]));
 document.getElementById('replayBtn').addEventListener('click', ()=>speak(questions[current]));
-document.getElementById('checkBtn').addEventListener('click', check);
+document.getElementById('checkBtn').addEventListener('click', reveal);
 document.getElementById('nextBtn').addEventListener('click', next);
-document.getElementById('answerInput').addEventListener('keydown', e=>{
-  if(e.key==='Enter'){ answered?next():check(); }
-});
+document.getElementById('clearPadBtn').addEventListener('click', clearPad);
+document.getElementById('markCorrectBtn').addEventListener('click', ()=>markSelf(true));
+document.getElementById('markWrongBtn').addEventListener('click', ()=>markSelf(false));
 document.getElementById('nameInput').addEventListener('keydown', e=>{ if(e.key==='Enter') startNew(); });
 document.getElementById('codeInput').addEventListener('keydown', e=>{ if(e.key==='Enter') loginByCode(); });
 document.getElementById('restartBtn').addEventListener('click', ()=>beginRound());
