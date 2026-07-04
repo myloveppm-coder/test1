@@ -82,13 +82,14 @@
 
   .mascot-badge{
     position:absolute;top:-58px;left:50%;transform:translateX(-50%);
-    width:112px;height:112px;border-radius:50%;
+    width:112px;height:112px;border-radius:50%;overflow:hidden;
     background:radial-gradient(circle at 35% 28%,#FFF6DC,#FFD98A 55%,#FFC172 100%);
     display:flex;align-items:center;justify-content:center;font-size:58px;line-height:1;
     box-shadow:0 8px 0 #E8A94A, 0 16px 28px rgba(43,58,85,.22), inset 0 0 0 5px #fff;
     animation:hatch 2.4s ease-in-out infinite;transform-origin:bottom center;
     z-index:3;
   }
+  .mascot-badge img{width:100%;height:100%;object-fit:cover}
   @keyframes hatch{0%,88%,100%{transform:translateX(-50%) translateY(0) rotate(0)}
     92%{transform:translateX(-50%) translateY(-8px) rotate(-8deg)}
     96%{transform:translateX(-50%) translateY(-8px) rotate(8deg)}}
@@ -303,7 +304,7 @@
 
   <!-- ── 로그인 화면 ── -->
   <div class="card login" id="loginCard">
-    <div class="mascot-badge">🐣</div>
+    <div class="mascot-badge"><img src="mascot.png" alt="마스코트"></div>
     <div class="speech-bubble"><span class="wave">👋</span>안녕! 어떻게 시작할까?</div>
 
     <div class="tabbar">
